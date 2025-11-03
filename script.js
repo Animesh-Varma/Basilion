@@ -14,3 +14,11 @@ window.addEventListener('wheel', (event) => {
         }, 500); // 500ms is the duration of the CSS transition
     }
 });
+
+window.addEventListener('scroll', () => {
+    if (window.scrollY === 0 && hasScrolled) {
+        hasScrolled = false;
+        header.classList.remove('shrink');
+        document.body.style.overflowY = 'hidden';
+    }
+});
