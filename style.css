@@ -37,6 +37,36 @@ body {
     align-items: center;
 }
 
+.construction {
+    position: relative;
+    padding: 0 100px; /* Add padding to make space for the tape */
+}
+
+.construction::before, .construction::after {
+    content: '';
+    position: absolute;
+    top: 50%;
+    width: 40px; /* Swapped width and height */
+    height: 120px; /* Swapped width and height */
+    background: repeating-linear-gradient(
+        135deg, /* Adjusted angle for vertical tape */
+        #ffc107,
+        #ffc107 10px,
+        #121212 10px,
+        #121212 20px
+    );
+    border: 2px solid #ffc107;
+    transform: translateY(-50%);
+}
+
+.construction::before {
+    left: 0;
+}
+
+.construction::after {
+    right: 0;
+}
+
 .construction h2 {
     font-size: 6rem;
     margin: 0;
