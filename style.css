@@ -88,3 +88,33 @@ footer a {
     color: #e0e0e0;
     text-decoration: none;
 }
+
+@media (max-width: 768px) {
+    #fullscreen-header h1 {
+        font-size: 12vw;
+        text-align: center;
+    }
+
+    #fullscreen-header.shrink h1 {
+        font-size: 8vw;
+    }
+
+    .construction h2 {
+        font-size: 3rem;
+        text-align: center;
+    }
+
+    .stay-tuned {
+        font-size: 1rem;
+        text-align: center;
+    }
+
+    .construction {
+        padding: 0 50px;
+    }
+
+    .construction::before, .construction::after {
+        width: 20px;
+        height: 80px;
+    }
+}
