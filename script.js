@@ -1,17 +1,34 @@
 const header = document.getElementById('fullscreen-header');
 const mainContent = document.getElementById('main-content');
 let hasScrolled = false;
+let touchStartY = 0;
 
-window.addEventListener('wheel', (event) => {
-    if (event.deltaY > 0 && !hasScrolled) {
+function triggerScroll() {
+    if (!hasScrolled) {
         hasScrolled = true;
         header.classList.add('shrink');
         document.body.style.overflowY = 'auto';
 
-        // Wait for the header animation to finish before scrolling
         setTimeout(() => {
             mainContent.scrollIntoView({ behavior: 'smooth' });
-        }, 500); // 500ms is the duration of the CSS transition
+        }, 500);
+    }
+}
+
+window.addEventListener('wheel', (event) => {
+    if (event.deltaY > 0) {
+        triggerScroll();
+    }
+});
+
+window.addEventListener('touchstart', (event) => {
+    touchStartY = event.touches[0].clientY;
+});
+
+window.addEventListener('touchmove', (event) => {
+    const touchCurrentY = event.touches[0].clientY;
+    if (touchStartY > touchCurrentY + 5) { // 5px threshold
+        triggerScroll();
     }
 });
 

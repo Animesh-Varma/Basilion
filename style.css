@@ -9,10 +9,28 @@ body {
 #fullscreen-header {
     height: 100vh;
     display: flex;
+    flex-direction: column; /* Align items vertically */
     justify-content: center;
     align-items: center;
     background-color: #121212;
     transition: height 0.5s ease-in-out;
+}
+
+#scroll-indicator {
+    position: absolute;
+    bottom: 20px;
+    color: #e0e0e0;
+    font-size: 1rem;
+    transition: opacity 0.5s ease-in-out;
+}
+
+#fullscreen-header.shrink #scroll-indicator {
+    opacity: 0;
+}
+
+@keyframes fade-out {
+    from { opacity: 1; }
+    to { opacity: 0; }
 }
 
 #fullscreen-header.shrink {
