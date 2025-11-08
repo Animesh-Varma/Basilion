@@ -64,6 +64,7 @@ body {
 .construction {
     position: relative;
     padding: 0 100px; /* Add padding to make space for the tape */
+     text-align: center;
 }
 
 .construction::before, .construction::after {
