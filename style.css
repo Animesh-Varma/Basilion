@@ -62,7 +62,6 @@ body {
     padding: 1rem 0 2rem 0;
 }
 
-/* Link Styling */
 .home-link {
     text-decoration: none;
     color: inherit;
@@ -71,9 +70,7 @@ body {
     transition: opacity 0.2s ease;
 }
 
-.home-link:hover {
-    opacity: 0.7;
-}
+.home-link:hover { opacity: 0.7; }
 
 .logo-section h1 {
     font-family: var(--font-mono);
@@ -179,7 +176,7 @@ body {
     flex: 1;
     display: flex;
     flex-direction: column;
-    padding-bottom: 2rem;
+    padding-bottom: 1rem;
 }
 
 .log-header {
@@ -266,7 +263,40 @@ body {
     transition: width 0.2s ease-out;
 }
 
-/* Animations */
+/* --- Footer --- */
+footer {
+    margin-top: auto;
+    padding-top: 2rem;
+    text-align: center;
+    color: var(--text-dim);
+    font-size: 0.85rem;
+    padding-bottom: 0.5rem;
+}
+
+footer a {
+    color: var(--text-dim);
+    text-decoration: none;
+    transition: all 0.2s ease;
+    margin: 0 4px;
+}
+
+footer a:hover {
+    color: var(--text-main);
+    text-decoration: underline;
+}
+
+/* --- Animations & Mobile --- */
 @keyframes slideIn {
     to { opacity: 1; transform: translateX(0); }
+}
+
+/* Mobile Optimization */
+@media (max-width: 600px) {
+    .logo-section h1 {
+        font-size: 0.9rem; /* Smaller title on mobile */
+    }
+
+    .app-container {
+        padding: 1rem; /* Slightly less padding on mobile */
+    }
 }
