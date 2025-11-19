@@ -1,5 +1,5 @@
 // Configuration: The specific Google Apps Script URL you provided
-const HERMES_UPLINK_URL = "https://script.google.com/macros/s/AKfycbzcvBp4jlad2lyLkFa_pIq1xw7QjHnD3kCcu72emxL7wzpscV267CNb-nYP4cExUNj2nw/exec";
+const WEB_APP_URL = "https://script.google.com/macros/s/AKfycbzcvBp4jlad2lyLkFa_pIq1xw7QjHnD3kCcu72emxL7wzpscV267CNb-nYP4cExUNj2nw/exec";
 
 // DOM Elements
 const dropZone = document.getElementById('dropZone');
