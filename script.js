@@ -34,21 +34,30 @@ document.addEventListener('DOMContentLoaded', async () => {
 async function loadData() {
     // Only try to load if URL is replaced (not placeholder)
     if (DB_URL && DB_URL.startsWith('http')) {
+
+        // Flash status so you know it's working
+        systemStatus.innerText = "ESTABLISHING UPLINK...";
+
         try {
-            const response = await fetch(DB_URL);
+            // CACHE BUSTER: ?t=${Date.now()} forces a fresh request every time
+            const response = await fetch(`${DB_URL}?t=${Date.now()}`);
             const json = await response.json();
+
             if (json.data && Array.isArray(json.data)) {
                 projects = json.data;
                 renderBoard();
+
+                // Reset status after load
+                systemStatus.innerText = isAuthenticated ? "ADMINISTRATOR" : "Viewing Mode";
                 return;
             }
         } catch (e) {
             console.warn("Cloud Load Failed, using Embedded:", e);
-            flashStatus("OFFLINE MODE", "#ff4444");
+            flashStatus("CONNECTION LOST", "#ff4444");
         }
     }
 
-    // Fallback
+    // Fallback (Only runs if Cloud fails)
     projects = [...EMBEDDED_DB];
     renderBoard();
 }
