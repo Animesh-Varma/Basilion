@@ -1,182 +1,213 @@
-// CONFIGURATION
-const WEB_APP_URL = "https://script.google.com/macros/s/AKfycbzfGvJ2LiJT1_iRsCsMHDVnCIQHt1RecjTj5aq14TswIyIg-1i5SsTxZFAd4F3-GXiqQA/exec";
-const fileListEl = document.getElementById('fileList');
-const toastContainer = document.getElementById('toast-container');
+// --- Configuration & State ---
+const SECTIONS = ['ongoing', 'planned', 'onhold', 'completed', 'scrapped'];
+let isAuthenticated = false;
 
+// Fake data for first load
+const DEFAULT_DATA = [
+    { id: '1', title: 'Lab Portfolio', link: 'https://lab.animeshvarma.dev', desc: 'The interface you are currently looking at.', section: 'ongoing' },
+    { id: '2', title: 'Upload Service', link: 'https://upload.animeshvarma.dev', desc: 'Secure file transmission protocol.', section: 'completed' }
+];
+
+// Load from LocalStorage or use Default
+let projects = JSON.parse(localStorage.getItem('lab_projects')) || DEFAULT_DATA;
+
+// --- DOM Elements ---
+const authModal = document.getElementById('authModal');
+const projectModal = document.getElementById('projectModal');
+const adminControls = document.getElementById('adminControls');
+const systemStatus = document.getElementById('systemStatus');
+const liveDot = document.querySelector('.live-dot');
+
+// --- Initialization ---
 document.addEventListener('DOMContentLoaded', () => {
-    initLoad();
+    renderBoard();
+    initDragAndDrop();
+
+    // Check if previously logged in (optional session persistence)
+    if(sessionStorage.getItem('lab_auth') === 'true') {
+        enableAdminMode();
+    }
 });
 
-function initLoad() {
-    fileListEl.innerHTML = `
-        <div class="loading-state">
-            <span class="material-symbols-rounded spin-icon">sync</span>
-            <span>ESTABLISHING CONNECTION...</span>
-        </div>
-    `;
+// --- Rendering ---
+function renderBoard() {
+    // Clear columns
+    SECTIONS.forEach(sec => document.getElementById(sec).innerHTML = '');
 
-    // Load the list via JSONP
-    loadJSONP('list')
-        .then(json => {
-            if (json.status === "error") throw new Error(json.message);
-            renderFiles(json.data);
-        })
-        .catch(error => {
-            console.error(error);
-            showError("Connection Failed", "Server returned invalid data");
-        });
+    projects.forEach(p => {
+        const card = createCard(p);
+        const container = document.getElementById(p.section);
+        if(container) container.appendChild(card);
+    });
 }
 
-function loadJSONP(action, id = null) {
-    return new Promise((resolve, reject) => {
-        // Create unique callback name
-        const callbackName = 'cb_' + Date.now() + '_' + Math.round(Math.random() * 1000000);
+function createCard(project) {
+    const div = document.createElement('div');
+    div.className = 'project-card';
+    div.setAttribute('data-id', project.id);
 
-        // Define the global callback
-        window[callbackName] = (data) => {
-            cleanup();
-            resolve(data);
-        };
+    // Edit Button (Only visible if auth)
+    const editBtn = isAuthenticated
+        ? `<button class="card-edit-btn material-symbols-rounded" onclick="editProject(event, '${project.id}')">edit</button>`
+        : '';
 
-        // Cleanup helper
-        function cleanup() {
-            delete window[callbackName];
-            if (script.parentNode) document.body.removeChild(script);
+    const linkIcon = project.link ? '<span class="material-symbols-rounded card-link-icon">link</span>' : '';
+
+    div.innerHTML = `
+        ${editBtn}
+        <span class="card-title">${project.title} ${linkIcon}</span>
+        <div class="card-desc">${project.desc || 'No description available.'}</div>
+    `;
+
+    // Click event to open link (unless clicking edit)
+    div.addEventListener('click', (e) => {
+        if(e.target.tagName !== 'BUTTON' && project.link) {
+            window.open(project.link, '_blank');
         }
-
-        // Create script tag
-        const script = document.createElement('script');
-        // Added &t= timestamp to prevent caching of old JSON responses
-        script.src = `${WEB_APP_URL}?action=${action}&id=${id || ''}&callback=${callbackName}&t=${Date.now()}`;
-
-        script.onerror = () => {
-            cleanup();
-            reject(new Error('Script load failed'));
-        };
-
-        document.body.appendChild(script);
     });
+
+    return div;
 }
 
-function renderFiles(files) {
-    fileListEl.innerHTML = '';
-
-    if (!files || files.length === 0) {
-        fileListEl.innerHTML = `
-            <div class="loading-state">
-                <span class="material-symbols-rounded">folder_off</span>
-                <span>NO FILES FOUND</span>
-            </div>`;
-        return;
-    }
-
-    files.forEach((file, index) => {
-        setTimeout(() => {
-            const card = document.createElement('div');
-            card.className = 'file-card';
-
-            let icon = 'description';
-            const t = (file.type || "").toLowerCase();
-            const isTextFile = isText(t, file.name);
-
-            if(t.includes('image')) icon = 'image';
-            else if(t.includes('video')) icon = 'movie';
-            else if(t.includes('pdf')) icon = 'picture_as_pdf';
-            else if(t.includes('zip') || t.includes('compressed')) icon = 'folder_zip';
-            else if(isTextFile) icon = 'code';
-
-            let actions = '';
-
-            if (isTextFile) {
-                actions += `
-                <button class="action-btn copy-btn" onclick="triggerCopy('${file.id}', this)" title="Extract Text">
-                    <span class="material-symbols-rounded">content_copy</span>
-                </button>`;
+// --- Drag & Drop (SortableJS) ---
+function initDragAndDrop() {
+    SECTIONS.forEach(secId => {
+        new Sortable(document.getElementById(secId), {
+            group: 'shared', // Allow dragging between lists
+            animation: 150,
+            disabled: !isAuthenticated, // Disable if not admin
+            ghostClass: 'sortable-ghost',
+            delay: 100, // Slight delay to prevent accidental drags on touch
+            delayOnTouchOnly: true,
+            onEnd: function (evt) {
+                updateProjectStatus(evt.item.getAttribute('data-id'), evt.to.id);
             }
-
-            actions += `
-            <a href="${file.url}" target="_blank" class="action-btn link-btn">
-                <span class="material-symbols-rounded">visibility</span>
-            </a>
-            <a href="${file.download}" class="action-btn link-btn">
-                <span class="material-symbols-rounded">download</span>
-            </a>`;
-
-            card.innerHTML = `
-                <div class="file-icon-box"><span class="material-symbols-rounded">${icon}</span></div>
-                <div class="file-details">
-                    <span class="file-name">${file.name}</span>
-                    <div class="file-meta">
-                        <span>${file.size}</span>
-                        <span>•</span>
-                        <span>${new Date(file.date).toLocaleDateString()}</span>
-                    </div>
-                </div>
-                <div class="actions">${actions}</div>
-            `;
-            fileListEl.appendChild(card);
-        }, index * 50);
+        });
     });
 }
 
-window.triggerCopy = function(id, btn) {
-    const original = btn.innerHTML;
-    btn.innerHTML = '<span class="material-symbols-rounded spin-icon">sync</span>';
-    btn.disabled = true;
-
-    loadJSONP('read', id)
-        .then(json => {
-            if(json.status === "error") throw new Error(json.message);
-
-            navigator.clipboard.writeText(json.content).then(() => {
-                showToast("EXTRACTED & COPIED");
-                btn.innerHTML = '<span class="material-symbols-rounded">check</span>';
-                setTimeout(() => {
-                    btn.innerHTML = original;
-                    btn.disabled = false;
-                }, 2000);
-            });
-        })
-        .catch(e => {
-            console.error(e);
-            showToast("EXTRACTION ERROR");
-            btn.innerHTML = '<span class="material-symbols-rounded">error</span>';
-            setTimeout(() => {
-                btn.innerHTML = original;
-                btn.disabled = false;
-            }, 2000);
-        });
-}
-
-function isText(mime, filename) {
-    if (mime.includes('text') || mime.includes('json') || mime.includes('xml') || mime.includes('javascript')) return true;
-    if (filename) {
-        const ext = filename.split('.').pop().toLowerCase();
-        const textExts = ['txt', 'md', 'js', 'html', 'css', 'json', 'py', 'c', 'cpp', 'h', 'java', 'gs', 'xml', 'csv', 'log', 'ini', 'env', 'sh', 'bat'];
-        return textExts.includes(ext);
+function updateProjectStatus(id, newSection) {
+    const p = projects.find(x => x.id === id);
+    if (p) {
+        p.section = newSection;
+        saveData();
     }
-    return false;
 }
 
-function showError(title, detail) {
-    fileListEl.innerHTML = `
-        <div class="loading-state" style="color: #ff4444; flex-direction: column; gap: 8px;">
-            <span class="material-symbols-rounded" style="font-size: 32px;">wifi_off</span>
-            <span style="font-weight: 700">${title}</span>
-            <span style="font-size: 0.8rem; opacity: 0.7; max-width: 300px; text-align: center;">${detail}</span>
-            <button onclick="initLoad()" style="margin-top:10px; background:none; border:1px solid #333; color:#fff; padding:5px 10px; border-radius:5px; cursor:pointer;">RETRY</button>
-        </div>
-    `;
+// --- Authentication ---
+document.getElementById('authLink').addEventListener('click', (e) => {
+    e.preventDefault();
+    if(isAuthenticated) return;
+    authModal.classList.remove('hidden');
+});
+
+function authenticate() {
+    const input = document.getElementById('adminPassword');
+    // Simple client-side check. Replace with real backend auth if needed.
+    if(input.value === 'admin123') { // CHANGE THIS PASSWORD
+        enableAdminMode();
+        closeModals();
+        input.value = '';
+    } else {
+        alert('ACCESS DENIED');
+        input.classList.add('error');
+    }
 }
 
-function showToast(msg) {
-    const t = document.createElement('div');
-    t.className = 'toast';
-    t.innerHTML = `<span class="material-symbols-rounded">terminal</span> ${msg}`;
-    toastContainer.appendChild(t);
-    setTimeout(() => {
-        t.style.opacity = '0';
-        t.style.transform = 'translateY(20px)';
-        setTimeout(() => t.remove(), 300);
-    }, 3000);
+function enableAdminMode() {
+    isAuthenticated = true;
+    sessionStorage.setItem('lab_auth', 'true');
+
+    document.body.classList.add('admin-view');
+    adminControls.classList.remove('hidden');
+
+    systemStatus.innerText = "ADMINISTRATOR";
+    systemStatus.style.color = "#FFFFFF";
+    liveDot.style.backgroundColor = "#00FF00"; // Green for admin
+    liveDot.style.boxShadow = "0 0 8px #00FF00";
+
+    // Re-init sortable to enable dragging
+    initDragAndDrop();
+    renderBoard(); // Re-render to show edit buttons
+}
+
+function logout() {
+    isAuthenticated = false;
+    sessionStorage.removeItem('lab_auth');
+    location.reload();
+}
+
+// --- Project Management ---
+
+function openProjectModal(isEdit = false, id = null) {
+    const titleInput = document.getElementById('pTitle');
+    const linkInput = document.getElementById('pLink');
+    const descInput = document.getElementById('pDesc');
+    const idInput = document.getElementById('editId');
+    const label = document.getElementById('modalTitle');
+
+    if (isEdit && id) {
+        const p = projects.find(x => x.id === id);
+        titleInput.value = p.title;
+        linkInput.value = p.link || '';
+        descInput.value = p.desc || '';
+        idInput.value = id;
+        label.innerText = "Edit Protocol";
+
+        // Add delete button logic if needed
+    } else {
+        titleInput.value = '';
+        linkInput.value = '';
+        descInput.value = '';
+        idInput.value = '';
+        label.innerText = "New Protocol";
+    }
+
+    projectModal.classList.remove('hidden');
+}
+
+function editProject(e, id) {
+    e.stopPropagation();
+    openProjectModal(true, id);
+}
+
+function saveProject() {
+    const id = document.getElementById('editId').value;
+    const title = document.getElementById('pTitle').value;
+    const link = document.getElementById('pLink').value;
+    const desc = document.getElementById('pDesc').value;
+
+    if(!title) return alert("Title required");
+
+    if (id) {
+        // Update existing
+        const p = projects.find(x => x.id === id);
+        p.title = title;
+        p.link = link;
+        p.desc = desc;
+    } else {
+        // Create new
+        projects.push({
+            id: Math.random().toString(36).substr(2, 9),
+            title: title,
+            link: link,
+            desc: desc,
+            section: 'ongoing' // Default section
+        });
+    }
+
+    saveData();
+    closeModals();
+    renderBoard();
+}
+
+// --- Utilities ---
+function closeModals() {
+    authModal.classList.add('hidden');
+    projectModal.classList.add('hidden');
+}
+
+function saveData() {
+    localStorage.setItem('lab_projects', JSON.stringify(projects));
+    // Here you would add: fetch('YOUR_GOOGLE_SCRIPT_URL', { method: 'POST', body: ... })
 }
