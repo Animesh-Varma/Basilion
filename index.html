@@ -3,10 +3,10 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>upload.animeshvarma.dev</title>
+    <title>board.animeshvarma.dev</title>
 
     <!-- Favicon -->
-    <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 24 24%22 fill=%22white%22><path d=%22M11 16V7.85l-2.6 2.6L7 9l5-5 5 5-1.4 1.45-2.6-2.6V16h-2Zm-5 4q-.825 0-1.412-.587Q4 18.825 4 18v-3h2v3h12v-3h2v3q0 .825-.587 1.413Q18.825 20 18 20Z%22/></svg>">
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 24 24%22 fill=%22white%22><path d=%22M16 13h-3v3h-2v-3H8l4-4 4 4Zm0 9H8v-2h8v2Zm0-18h-3V2h-2v2H8l4 4 4-4Z%22/></svg>">
 
     <!-- Typography & Icons -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -26,7 +26,7 @@
         <header class="top-bar">
             <div class="logo-section">
                 <a href="https://animeshvarma.dev" class="home-link">
-                    <h1><span class="highlight">upload</span>.animeshvarma.dev</h1>
+                    <h1><span class="highlight">board</span>.animeshvarma.dev</h1>
                 </a>
             </div>
             <div class="status-badge">
@@ -36,36 +36,32 @@
         </header>
 
         <main>
-            <!-- Upload Area -->
-            <section class="upload-section">
-                <div class="drop-zone" id="dropZone">
-                    <div class="illustration">
-                        <span class="material-symbols-rounded large-icon">cloud_upload</span>
-                        <div class="ripple-ring"></div>
-                    </div>
-                    <h2>Initiate Upload</h2>
-                    <p>Drag files here or click to browse</p>
-                    <input type="file" id="fileInput" multiple hidden>
-                </div>
-            </section>
+            <!-- Header for the list -->
+            <div class="list-header-area">
+                <h2 class="section-title">
+                    <span class="material-symbols-rounded">folder_open</span>
+                    INDEX STREAM
+                </h2>
+                <p class="section-subtitle">Listing all available nodes.</p>
+            </div>
 
-            <!-- Transmission Log -->
+            <!-- File List -->
             <section class="log-section">
-                <div class="log-header">
-                    <span class="material-symbols-rounded">terminal</span>
-                    <span>TRANSMISSION LOG</span>
-                </div>
-                <div class="log-list-container" id="logList">
-                    <!-- Log entries injected via JS -->
+                <div class="log-list-container" id="fileList">
+                    <!-- Loading State -->
+                    <div class="loading-state">
+                        <span class="material-symbols-rounded spin-icon">sync</span>
+                        <span>ESTABLISHING CONNECTION...</span>
+                    </div>
                 </div>
             </section>
         </main>
 
         <footer>
             <p>
+                <a href="https://upload.animeshvarma.dev" target="_blank">Upload</a> |
                 <a href="https://github.com/animesh-varma" target="_blank">GitHub</a> |
-                <a href="mailto:mail@animeshvarma.dev">Email</a> |
-                <a href="https://instagram.com/animesh_varma" target="_blank">Instagram</a>
+                <a href="mailto:mail@animeshvarma.dev">Email</a>
             </p>
         </footer>
     </div>
