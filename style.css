@@ -128,7 +128,7 @@ body {
     flex-shrink: 0;
 }
 
-.file-details { flex: 1; min-width: 0; /* Crucial for text-overflow */ }
+.file-details { flex: 1; min-width: 0; }
 
 .file-name {
     font-size: 0.9rem; font-weight: 500;
@@ -149,16 +149,62 @@ body {
     background: transparent; color: var(--text-main);
     display: flex; align-items: center; justify-content: center;
     cursor: pointer; transition: all 0.2s ease;
-    text-decoration: none;
+    text-decoration: none; position: relative;
 }
 
-.action-btn:hover {
+/* Specific Copy Button Style */
+.action-btn.copy-btn:hover {
     background-color: var(--text-main);
     color: var(--bg-color);
     border-color: var(--text-main);
 }
 
+.action-btn.link-btn:hover {
+    background-color: var(--surface-hover);
+    border-color: var(--text-main);
+}
+
 .action-btn span { font-size: 18px; }
+
+/* --- Toast Notification --- */
+.toast-container {
+    position: fixed; bottom: 24px; left: 50%;
+    transform: translateX(-50%);
+    z-index: 100;
+    display: flex; flex-direction: column; gap: 8px;
+    pointer-events: none;
+}
+
+.toast {
+    background-color: var(--text-main);
+    color: var(--bg-color);
+    padding: 10px 20px;
+    border-radius: 50px;
+    font-family: var(--font-mono);
+    font-size: 0.8rem;
+    font-weight: 700;
+    display: flex; align-items: center; gap: 8px;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.4);
+    animation: toastUp 0.3s var(--ease-spring) forwards;
+}
+
+@keyframes toastUp {
+    from { opacity: 0; transform: translateY(20px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+.loading-state {
+    display: flex; align-items: center; justify-content: center; gap: 10px;
+    padding: 40px 0; color: var(--text-dim);
+    font-family: var(--font-mono); font-size: 0.8rem;
+}
+
+.spin-icon { animation: spin 1s linear infinite; }
+
+/* UPDATED: Rotates Counter-Clockwise now */
+@keyframes spin {
+    to { transform: rotate(-360deg); }
+}
 
 /* --- Footer --- */
 footer {
