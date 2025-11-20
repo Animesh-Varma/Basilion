@@ -1,85 +1,160 @@
-// --- Configuration & State ---
-const SECTIONS = ['ongoing', 'planned', 'onhold', 'completed', 'scrapped'];
-let isAuthenticated = false;
+// --- Configuration ---
 
-// Fake data for first load
-const DEFAULT_DATA = [
-    { id: '1', title: 'Lab Portfolio', link: 'https://lab.animeshvarma.dev', desc: 'The interface you are currently looking at.', section: 'ongoing' },
-    { id: '2', title: 'Upload Service', link: 'https://upload.animeshvarma.dev', desc: 'Secure file transmission protocol.', section: 'completed' }
+// 1. Database URL
+// Replaced by Cloudflare Build Command: sed -i "s|__DB_URL__|$DB_URL|g" script.js
+const DB_URL = "__DB_URL__";
+
+// 2. Admin Hash
+// Replaced by Cloudflare Build Command: sed -i "s|__ADMIN_HASH__|$ADMIN_HASH|g" script.js
+const TARGET_HASH = "__ADMIN_HASH__";
+
+// 3. Fallback Data (If DB fails or is empty)
+const EMBEDDED_DB = [
+    { id: '101', title: 'Lab Interface', link: 'https://lab.animeshvarma.dev', desc: 'The Kanban interface you are viewing right now.', section: 'ongoing' },
+    { id: '102', title: 'Upload Protocol', link: 'https://upload.animeshvarma.dev', desc: 'Secure file transmission protocol.', section: 'completed' }
 ];
 
-// Load from LocalStorage or use Default
-let projects = JSON.parse(localStorage.getItem('lab_projects')) || DEFAULT_DATA;
+// --- State ---
+const SECTIONS = ['ongoing', 'planned', 'onhold', 'completed', 'scrapped'];
+let projects = [];
+let isAuthenticated = false;
 
-// --- DOM Elements ---
-const authModal = document.getElementById('authModal');
-const projectModal = document.getElementById('projectModal');
-const adminControls = document.getElementById('adminControls');
 const systemStatus = document.getElementById('systemStatus');
 const liveDot = document.querySelector('.live-dot');
 
 // --- Initialization ---
-document.addEventListener('DOMContentLoaded', () => {
-    renderBoard();
+document.addEventListener('DOMContentLoaded', async () => {
+    await loadData();
     initDragAndDrop();
-
-    // Check if previously logged in (optional session persistence)
-    if(sessionStorage.getItem('lab_auth') === 'true') {
-        enableAdminMode();
-    }
+    checkSession();
 });
+
+// --- Data Synchronization ---
+
+async function loadData() {
+    // Only try to load if URL is replaced (not placeholder)
+    if (DB_URL && DB_URL.startsWith('http')) {
+        try {
+            const response = await fetch(DB_URL);
+            const json = await response.json();
+            if (json.data && Array.isArray(json.data)) {
+                projects = json.data;
+                renderBoard();
+                return;
+            }
+        } catch (e) {
+            console.warn("Cloud Load Failed, using Embedded:", e);
+            flashStatus("OFFLINE MODE", "#ff4444");
+        }
+    }
+
+    // Fallback
+    projects = [...EMBEDDED_DB];
+    renderBoard();
+}
+
+async function syncToCloud() {
+    if (!DB_URL || !DB_URL.startsWith('http')) {
+        return console.warn("No DB URL configured.");
+    }
+
+    flashStatus("TRANSMITTING...", "#FFFF00");
+
+    try {
+        // 'no-cors' is required for Google Apps Script POST requests from browser
+        await fetch(DB_URL, {
+            method: 'POST',
+            mode: 'no-cors',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(projects)
+        });
+
+        // Since 'no-cors' returns an opaque response, we assume success if no network error
+        setTimeout(() => flashStatus("SYNC COMPLETE", "#FFFFFF"), 500);
+
+    } catch (e) {
+        console.error(e);
+        flashStatus("SYNC ERROR", "#ff4444");
+    }
+}
+
+function flashStatus(text, color) {
+    const originalText = isAuthenticated ? "ADMINISTRATOR" : "Viewing Mode";
+    const originalColor = isAuthenticated ? "#00FF00" : "#FFFFFF";
+
+    systemStatus.innerText = text;
+    systemStatus.style.color = color;
+    liveDot.style.backgroundColor = color;
+    liveDot.style.boxShadow = `0 0 8px ${color}`;
+
+    setTimeout(() => {
+        systemStatus.innerText = originalText;
+        systemStatus.style.color = "#888";
+        liveDot.style.backgroundColor = originalColor;
+        liveDot.style.boxShadow = `0 0 8px ${originalColor}`;
+    }, 2000);
+}
 
 // --- Rendering ---
 function renderBoard() {
-    // Clear columns
     SECTIONS.forEach(sec => document.getElementById(sec).innerHTML = '');
-
-    projects.forEach(p => {
-        const card = createCard(p);
-        const container = document.getElementById(p.section);
-        if(container) container.appendChild(card);
-    });
+    projects.forEach(createCardElement);
 }
 
-function createCard(project) {
+function createCardElement(p) {
+    const container = document.getElementById(p.section);
+    if (!container) return;
+
     const div = document.createElement('div');
     div.className = 'project-card';
-    div.setAttribute('data-id', project.id);
+    div.setAttribute('data-id', p.id);
 
-    // Edit Button (Only visible if auth)
-    const editBtn = isAuthenticated
-        ? `<button class="card-edit-btn material-symbols-rounded" onclick="editProject(event, '${project.id}')">edit</button>`
-        : '';
+    // Edit Button (Fixed Position & Click Handling)
+    let editBtn = '';
+    if (isAuthenticated) {
+        editBtn = `<button class="card-edit-btn material-symbols-rounded" type="button">edit</button>`;
+    }
 
-    const linkIcon = project.link ? '<span class="material-symbols-rounded card-link-icon">link</span>' : '';
+    const linkIcon = p.link ? '<span class="material-symbols-rounded card-link-icon">link</span>' : '';
 
     div.innerHTML = `
         ${editBtn}
-        <span class="card-title">${project.title} ${linkIcon}</span>
-        <div class="card-desc">${project.desc || 'No description available.'}</div>
+        <span class="card-title">${p.title} ${linkIcon}</span>
+        <div class="card-desc-wrapper">
+            <div class="card-desc-inner">
+                ${p.desc || 'No details.'}
+            </div>
+        </div>
     `;
 
-    // Click event to open link (unless clicking edit)
+    // Link Click Logic
     div.addEventListener('click', (e) => {
-        if(e.target.tagName !== 'BUTTON' && project.link) {
-            window.open(project.link, '_blank');
+        // If clicking the edit button, don't open link
+        if (e.target.closest('.card-edit-btn')) {
+            e.stopPropagation();
+            editProject(p.id);
+            return;
         }
+        // If card has link, open it
+        if (p.link) window.open(p.link, '_blank');
     });
 
-    return div;
+    container.appendChild(div);
 }
 
-// --- Drag & Drop (SortableJS) ---
+// --- Drag & Drop ---
 function initDragAndDrop() {
     SECTIONS.forEach(secId => {
         new Sortable(document.getElementById(secId), {
-            group: 'shared', // Allow dragging between lists
+            group: 'shared',
             animation: 150,
-            disabled: !isAuthenticated, // Disable if not admin
+            disabled: !isAuthenticated, // Locked unless admin
             ghostClass: 'sortable-ghost',
-            delay: 100, // Slight delay to prevent accidental drags on touch
-            delayOnTouchOnly: true,
-            onEnd: function (evt) {
+            delay: 100, delayOnTouchOnly: true,
+            onEnd: (evt) => {
+                if(evt.from === evt.to && evt.oldIndex === evt.newIndex) return;
                 updateProjectStatus(evt.item.getAttribute('data-id'), evt.to.id);
             }
         });
@@ -90,21 +165,28 @@ function updateProjectStatus(id, newSection) {
     const p = projects.find(x => x.id === id);
     if (p) {
         p.section = newSection;
-        saveData();
+        syncToCloud();
     }
 }
 
 // --- Authentication ---
 document.getElementById('authLink').addEventListener('click', (e) => {
     e.preventDefault();
-    if(isAuthenticated) return;
-    authModal.classList.remove('hidden');
+    if (!isAuthenticated) document.getElementById('authModal').classList.remove('hidden');
 });
 
-function authenticate() {
+async function authenticate() {
     const input = document.getElementById('adminPassword');
-    // Simple client-side check. Replace with real backend auth if needed.
-    if(input.value === 'admin123') { // CHANGE THIS PASSWORD
+    const hash = await hashString(input.value);
+
+    // Check against Env Var or default to "admin" hash for testing
+    const validHash = (!TARGET_HASH.includes("ADMIN_HASH"))
+        ? TARGET_HASH
+        : "8c6976e5b5410415bde908bd4dee15dfb167a9c873fc4bb8a81f6f2ab448a918";
+
+    if (hash === validHash) {
+        isAuthenticated = true;
+        sessionStorage.setItem('lab_auth', 'true');
         enableAdminMode();
         closeModals();
         input.value = '';
@@ -114,60 +196,59 @@ function authenticate() {
     }
 }
 
+async function hashString(msg) {
+    const data = new TextEncoder().encode(msg);
+    const hash = await crypto.subtle.digest('SHA-256', data);
+    return Array.from(new Uint8Array(hash)).map(b => b.toString(16).padStart(2, '0')).join('');
+}
+
+function checkSession() {
+    if (sessionStorage.getItem('lab_auth') === 'true') enableAdminMode();
+}
+
 function enableAdminMode() {
     isAuthenticated = true;
-    sessionStorage.setItem('lab_auth', 'true');
-
     document.body.classList.add('admin-view');
-    adminControls.classList.remove('hidden');
+    document.getElementById('adminControls').classList.remove('hidden');
 
+    // Visuals
+    liveDot.style.backgroundColor = "#00FF00";
+    liveDot.style.boxShadow = "0 0 8px #00FF00";
     systemStatus.innerText = "ADMINISTRATOR";
     systemStatus.style.color = "#FFFFFF";
-    liveDot.style.backgroundColor = "#00FF00"; // Green for admin
-    liveDot.style.boxShadow = "0 0 8px #00FF00";
 
-    // Re-init sortable to enable dragging
-    initDragAndDrop();
-    renderBoard(); // Re-render to show edit buttons
+    initDragAndDrop(); // Re-init to unlock dragging
+    renderBoard(); // Re-render to show pencils
 }
 
 function logout() {
-    isAuthenticated = false;
     sessionStorage.removeItem('lab_auth');
     location.reload();
 }
 
-// --- Project Management ---
-
+// --- CRUD ---
 function openProjectModal(isEdit = false, id = null) {
-    const titleInput = document.getElementById('pTitle');
-    const linkInput = document.getElementById('pLink');
-    const descInput = document.getElementById('pDesc');
-    const idInput = document.getElementById('editId');
+    const titleIn = document.getElementById('pTitle');
+    const linkIn = document.getElementById('pLink');
+    const descIn = document.getElementById('pDesc');
+    const idIn = document.getElementById('editId');
     const label = document.getElementById('modalTitle');
 
     if (isEdit && id) {
         const p = projects.find(x => x.id === id);
-        titleInput.value = p.title;
-        linkInput.value = p.link || '';
-        descInput.value = p.desc || '';
-        idInput.value = id;
+        titleIn.value = p.title;
+        linkIn.value = p.link || '';
+        descIn.value = p.desc || '';
+        idIn.value = id;
         label.innerText = "Edit Protocol";
-
-        // Add delete button logic if needed
     } else {
-        titleInput.value = '';
-        linkInput.value = '';
-        descInput.value = '';
-        idInput.value = '';
+        titleIn.value = ''; linkIn.value = ''; descIn.value = ''; idIn.value = '';
         label.innerText = "New Protocol";
     }
-
-    projectModal.classList.remove('hidden');
+    document.getElementById('projectModal').classList.remove('hidden');
 }
 
-function editProject(e, id) {
-    e.stopPropagation();
+function editProject(id) {
     openProjectModal(true, id);
 }
 
@@ -177,37 +258,23 @@ function saveProject() {
     const link = document.getElementById('pLink').value;
     const desc = document.getElementById('pDesc').value;
 
-    if(!title) return alert("Title required");
+    if (!title) return alert("Title required");
 
     if (id) {
-        // Update existing
         const p = projects.find(x => x.id === id);
-        p.title = title;
-        p.link = link;
-        p.desc = desc;
+        p.title = title; p.link = link; p.desc = desc;
     } else {
-        // Create new
         projects.push({
             id: Math.random().toString(36).substr(2, 9),
-            title: title,
-            link: link,
-            desc: desc,
-            section: 'ongoing' // Default section
+            title, link, desc, section: 'ongoing'
         });
     }
 
-    saveData();
+    syncToCloud();
     closeModals();
     renderBoard();
 }
 
-// --- Utilities ---
 function closeModals() {
-    authModal.classList.add('hidden');
-    projectModal.classList.add('hidden');
-}
-
-function saveData() {
-    localStorage.setItem('lab_projects', JSON.stringify(projects));
-    // Here you would add: fetch('YOUR_GOOGLE_SCRIPT_URL', { method: 'POST', body: ... })
+    document.querySelectorAll('.modal-overlay').forEach(m => m.classList.add('hidden'));
 }
