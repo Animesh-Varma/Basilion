@@ -1,9 +1,11 @@
 // --- Configuration ---
 
 // 1. Database URL
+// Replaced by Cloudflare Build Command: sed -i "s|__DB_URL__|$DB_URL|g" script.js
 const DB_URL = "__DB_URL__";
 
 // 2. Admin Hash (Used for UI feedback, but actual security is now on Server)
+// Replaced by Cloudflare Build Command: sed -i "s|__ADMIN_HASH__|$ADMIN_HASH|g" script.js
 const TARGET_HASH = "__ADMIN_HASH__";
 
 // 3. Fallback Data
@@ -20,6 +22,7 @@ let sessionToken = null; // Stores the computed hash
 
 const systemStatus = document.getElementById('systemStatus');
 const liveDot = document.querySelector('.live-dot');
+const loadingOverlay = document.getElementById('loadingOverlay');
 
 // --- Initialization ---
 document.addEventListener('DOMContentLoaded', async () => {
@@ -31,24 +34,38 @@ document.addEventListener('DOMContentLoaded', async () => {
 // --- Data Synchronization ---
 
 async function loadData() {
+    // Keep overlay visible
+
     if (DB_URL && DB_URL.startsWith('http')) {
-        systemStatus.innerText = "ESTABLISHING UPLINK...";
         try {
             const response = await fetch(`${DB_URL}?t=${Date.now()}`);
+
+            // Handle HTTP Errors (404, 500, etc)
+            if (!response.ok) {
+                throw new Error(response.status);
+            }
+
             const json = await response.json();
             if (json.data && Array.isArray(json.data)) {
                 projects = json.data;
                 renderBoard();
-                updateStatusDisplay();
+                // Success: Fade out overlay
+                setTimeout(() => loadingOverlay.classList.add('hidden'), 300);
                 return;
             }
         } catch (e) {
             console.warn("Cloud Load Failed, using Embedded:", e);
-            flashStatus("CONNECTION LOST", "#ff4444");
+            // Show specific error in top right
+            const errCode = e.message === "Failed to fetch" ? "NETWORK" : e.message;
+            flashStatus(`ERROR ${errCode}`, "#ff4444");
         }
     }
+
+    // Fallback if fetch fails or no URL
     projects = [...EMBEDDED_DB];
     renderBoard();
+    // Even on error, remove overlay so user can see embedded data
+    setTimeout(() => loadingOverlay.classList.add('hidden'), 300);
 }
 
 async function syncToCloud() {
@@ -58,20 +75,22 @@ async function syncToCloud() {
     flashStatus("TRANSMITTING...", "#FFFF00");
 
     try {
-        // SECURE POST: Sending { auth: "HASH", data: [...] }
-        await fetch(DB_URL, {
+        const response = await fetch(DB_URL, {
             method: 'POST',
             mode: 'no-cors',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
-                auth: sessionToken, // <--- The Key
+                auth: sessionToken,
                 data: projects
             })
         });
+
+        // 'no-cors' returns opaque response (status 0), assume success if no exception
         setTimeout(() => flashStatus("SYNC COMPLETE", "#FFFFFF"), 500);
     } catch (e) {
         console.error(e);
-        flashStatus("SYNC ERROR", "#ff4444");
+        const errCode = e.message === "Failed to fetch" ? "NETWORK" : "UNKNOWN";
+        flashStatus(`ERROR ${errCode}`, "#ff4444");
     }
 }
 
@@ -94,7 +113,11 @@ function flashStatus(text, color) {
     systemStatus.style.color = color;
     liveDot.style.backgroundColor = color;
     liveDot.style.boxShadow = `0 0 8px ${color}`;
-    setTimeout(updateStatusDisplay, 2000);
+
+    // Only revert to default status if it's NOT a persistent error
+    if (!text.includes("ERROR")) {
+        setTimeout(updateStatusDisplay, 2000);
+    }
 }
 
 // --- Rendering ---
