@@ -4,7 +4,7 @@
 // Replaced by Cloudflare Build Command: sed -i "s|__DB_URL__|$DB_URL|g" script.js
 const DB_URL = "__DB_URL__";
 
-// 2. Admin Hash (Used for UI feedback, but actual security is now on Server)
+// 2. Admin Hash
 // Replaced by Cloudflare Build Command: sed -i "s|__ADMIN_HASH__|$ADMIN_HASH|g" script.js
 const TARGET_HASH = "__ADMIN_HASH__";
 
@@ -18,15 +18,19 @@ const EMBEDDED_DB = [
 const SECTIONS = ['ongoing', 'planned', 'onhold', 'stable', 'discontinued'];
 let projects = [];
 let isAuthenticated = false;
-let sessionToken = null; // Stores the computed hash
+let sessionToken = null;
 
-const systemStatus = document.getElementById('systemStatus');
-const liveDot = document.querySelector('.live-dot');
-const loadingOverlay = document.getElementById('loadingOverlay');
-const mainContent = document.querySelector('main');
+// DOM Elements (Initialized in setup)
+let systemStatus, liveDot, loadingOverlay, mainContent;
 
 // --- Initialization ---
 document.addEventListener('DOMContentLoaded', async () => {
+    // Initialize DOM elements safely
+    systemStatus = document.getElementById('systemStatus');
+    liveDot = document.querySelector('.live-dot');
+    loadingOverlay = document.getElementById('loadingOverlay');
+    mainContent = document.querySelector('main');
+
     await loadData();
     initDragAndDrop();
     checkSession();
@@ -35,42 +39,39 @@ document.addEventListener('DOMContentLoaded', async () => {
 // --- Data Synchronization ---
 
 async function loadData() {
+    // Flag to track if we successfully loaded from cloud
+    let cloudSuccess = false;
+
     if (DB_URL && DB_URL.startsWith('http')) {
         try {
             const response = await fetch(`${DB_URL}?t=${Date.now()}`);
 
-            // Handle HTTP Errors (404, 500, etc)
-            if (!response.ok) {
-                throw new Error(response.status);
-            }
+            if (!response.ok) throw new Error(response.status);
 
             const json = await response.json();
             if (json.data && Array.isArray(json.data)) {
                 projects = json.data;
-                renderBoard();
-
-                // Trigger Animation
-                setTimeout(() => {
-                    loadingOverlay.classList.add('hidden');
-                    mainContent.classList.add('loaded'); // Triggers CSS animation
-                }, 300);
-                return;
+                cloudSuccess = true;
             }
         } catch (e) {
             console.warn("Cloud Load Failed, using Embedded:", e);
-            // Show specific error in top right
             const errCode = e.message === "Failed to fetch" ? "NETWORK" : e.message;
             flashStatus(`ERROR ${errCode}`, "#ff4444");
         }
     }
 
-    // Fallback if fetch fails or no URL
-    projects = [...EMBEDDED_DB];
+    // If Cloud failed, use fallback
+    if (!cloudSuccess) {
+        projects = [...EMBEDDED_DB];
+    }
+
+    // Render
     renderBoard();
-    // Trigger Animation even on fallback
+
+    // ALWAYS hide overlay and animate
     setTimeout(() => {
-        loadingOverlay.classList.add('hidden');
-        mainContent.classList.add('loaded');
+        if(loadingOverlay) loadingOverlay.classList.add('hidden');
+        if(mainContent) mainContent.classList.add('loaded');
     }, 300);
 }
 
@@ -90,8 +91,6 @@ async function syncToCloud() {
                 data: projects
             })
         });
-
-        // 'no-cors' returns opaque response (status 0), assume success if no exception
         setTimeout(() => flashStatus("SYNC COMPLETE", "#FFFFFF"), 500);
     } catch (e) {
         console.error(e);
@@ -101,6 +100,7 @@ async function syncToCloud() {
 }
 
 function updateStatusDisplay() {
+    if (!systemStatus) return;
     if (isAuthenticated) {
         systemStatus.innerText = "ADMINISTRATOR";
         systemStatus.style.color = "#FFFFFF";
@@ -115,12 +115,12 @@ function updateStatusDisplay() {
 }
 
 function flashStatus(text, color) {
+    if (!systemStatus) return;
     systemStatus.innerText = text;
     systemStatus.style.color = color;
     liveDot.style.backgroundColor = color;
     liveDot.style.boxShadow = `0 0 8px ${color}`;
 
-    // Only revert to default status if it's NOT a persistent error
     if (!text.includes("ERROR")) {
         setTimeout(updateStatusDisplay, 2000);
     }
@@ -128,7 +128,10 @@ function flashStatus(text, color) {
 
 // --- Rendering ---
 function renderBoard() {
-    SECTIONS.forEach(sec => document.getElementById(sec).innerHTML = '');
+    SECTIONS.forEach(sec => {
+        const el = document.getElementById(sec);
+        if (el) el.innerHTML = '';
+    });
     projects.forEach(createCardElement);
 }
 
@@ -140,7 +143,6 @@ function createCardElement(p) {
     div.className = 'project-card';
     div.setAttribute('data-id', p.id);
 
-    // Admin Controls
     let actions = '';
     if (isAuthenticated) {
         actions = `
@@ -181,7 +183,9 @@ function createCardElement(p) {
 // --- Drag & Drop ---
 function initDragAndDrop() {
     SECTIONS.forEach(secId => {
-        new Sortable(document.getElementById(secId), {
+        const el = document.getElementById(secId);
+        if (!el) return;
+        new Sortable(el, {
             group: 'shared',
             animation: 150,
             disabled: !isAuthenticated,
@@ -213,16 +217,14 @@ async function authenticate() {
     const input = document.getElementById('adminPassword');
     const hash = await hashString(input.value);
 
-    // Allow "admin" default hash if env var not replaced
     const validHash = (!TARGET_HASH.includes("ADMIN_HASH"))
         ? TARGET_HASH
         : "8c6976e5b5410415bde908bd4dee15dfb167a9c873fc4bb8a81f6f2ab448a918";
 
     if (hash === validHash) {
         isAuthenticated = true;
-        sessionToken = hash; // Store the token for API calls
-        sessionStorage.setItem('lab_token', hash); // Persist
-
+        sessionToken = hash;
+        sessionStorage.setItem('lab_token', hash);
         enableAdminMode();
         closeModals();
         input.value = '';
@@ -251,8 +253,8 @@ function enableAdminMode() {
     document.body.classList.add('admin-view');
     document.getElementById('adminControls').classList.remove('hidden');
     updateStatusDisplay();
-    initDragAndDrop(); // Re-init Sortable to unlock
-    renderBoard(); // Re-render to show buttons
+    initDragAndDrop();
+    renderBoard();
 }
 
 function logout() {

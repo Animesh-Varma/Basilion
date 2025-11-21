@@ -17,7 +17,8 @@
     <!-- SortableJS for Drag & Drop -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/Sortable/1.15.0/Sortable.min.js"></script>
 
-    <link rel="stylesheet" href="style.css?v=1.4">
+    <link rel="stylesheet" href="style.css?v=1.5">
+    <script src="script.js" defer></script>
 </head>
 <body>
 
@@ -48,10 +49,9 @@
         </header>
 
         <main>
-            <!-- Loading Overlay (Scoped to Main Content) -->
+            <!-- Loading Overlay (Material 3 Animated Gradient) -->
             <div class="loading-overlay" id="loadingOverlay">
                 <div class="loader-content">
-                    <!-- Material 3 Indeterminate Spinner SVG -->
                     <svg class="md-spinner" viewBox="0 0 50 50">
                         <circle class="md-spinner-path" cx="25" cy="25" r="20" fill="none" stroke-width="4"></circle>
                     </svg>
@@ -148,7 +148,5 @@
             </div>
         </div>
     </div>
-
-    <script src="script.js"></script>
 </body>
 </html>
