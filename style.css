@@ -107,7 +107,7 @@ body {
 
 /* The Blurred State */
 .blurred-content {
-    filter: blur(8px) grayscale(50%);
+    filter: blur(5px) grayscale(50%);
     pointer-events: none;
     user-select: none;
     opacity: 0.6;
@@ -147,7 +147,7 @@ body {
     transform: translateY(-20px) scale(0.95);
 }
 
-.lock-icon { font-size: 48px; color: var(--text-main); margin-bottom: 16px; }
+.lock-icon { font-size: 38px; color: var(--text-main); margin-bottom: 16px; }
 
 .auth-box h3 {
     font-family: var(--font-mono); font-size: 1rem;
