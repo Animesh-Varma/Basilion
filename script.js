@@ -15,7 +15,7 @@ const EMBEDDED_DB = [
 ];
 
 // --- State ---
-const SECTIONS = ['ongoing', 'planned', 'onhold', 'stable', 'scrapped'];
+const SECTIONS = ['ongoing', 'planned', 'onhold', 'stable', 'discontinued'];
 let projects = [];
 let isAuthenticated = false;
 

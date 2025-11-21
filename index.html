@@ -17,7 +17,7 @@
     <!-- SortableJS for Drag & Drop -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/Sortable/1.15.0/Sortable.min.js"></script>
 
-    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="style.css?v=1.1">
 </head>
 <body>
 
@@ -53,7 +53,7 @@
 
                 <!-- Section: On Going -->
                 <div class="board-column">
-                    <div class="column-header">
+                    <div class="column-header" data-tooltip="Actively being developed; subject to frequent changes. Use with caution.">
                         <span class="material-symbols-rounded">sync</span>
                         <span>ON GOING</span>
                     </div>
@@ -64,7 +64,7 @@
 
                 <!-- Section: Planned -->
                 <div class="board-column">
-                    <div class="column-header">
+                    <div class="column-header" data-tooltip="Concepts and designs are complete, but development is pending.">
                         <span class="material-symbols-rounded">pending</span>
                         <span>PLANNED</span>
                     </div>
@@ -73,7 +73,7 @@
 
                 <!-- Section: On Hold -->
                 <div class="board-column">
-                    <div class="column-header">
+                    <div class="column-header" data-tooltip="Temporarily paused. Development is scheduled to resume in the future.">
                         <span class="material-symbols-rounded">pause_circle</span>
                         <span>ON HOLD</span>
                     </div>
@@ -82,20 +82,20 @@
 
                 <!-- Section: STABLE -->
                 <div class="board-column">
-                    <div class="column-header">
+                    <div class="column-header" data-tooltip="Released, production-ready, and actively supported with maintenance updates.">
                         <span class="material-symbols-rounded">check_circle</span>
                         <span>STABLE</span>
                     </div>
                     <div class="card-list" id="stable"></div>
                 </div>
 
-                <!-- Section: Scrapped -->
+                <!-- Section: Discontinued -->
                 <div class="board-column">
-                    <div class="column-header">
+                    <div class="column-header" data-tooltip="Development has ceased. The code is archived and available for use or community iteration.">
                         <span class="material-symbols-rounded">cancel</span>
-                        <span>SCRAPPED</span>
+                        <span>DISCONTINUED</span>
                     </div>
-                    <div class="card-list" id="scrapped"></div>
+                    <div class="card-list" id="discontinued"></div>
                 </div>
 
             </div>

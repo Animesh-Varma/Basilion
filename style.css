@@ -110,6 +110,51 @@ main { flex: 1; overflow: hidden; display: flex; flex-direction: column; padding
     font-family: var(--font-mono); font-size: 0.8rem; color: var(--text-dim);
     letter-spacing: 1px; border-bottom: 1px solid var(--outline);
     background: var(--surface); border-radius: var(--radius-md) var(--radius-md) 0 0;
+    /* Tooltip positioning */
+    position: relative;
+    cursor: default; /* Changed from help to default */
+}
+
+/* --- Material 3 Tooltip --- */
+.column-header::after {
+    content: attr(data-tooltip);
+    position: absolute;
+    top: 100%;
+    left: 50%;
+    transform: translateX(-50%) translateY(4px) scale(0.95);
+
+    /* Material 3 Styling */
+    background: var(--surface-container);
+    border: 1px solid var(--outline);
+    color: var(--text-main);
+    padding: 8px 12px;
+    border-radius: 8px;
+
+    font-family: var(--font-main);
+    font-size: 0.75rem;
+    font-weight: 400;
+    line-height: 1.4;
+    text-transform: none; /* Override parent header caps */
+    letter-spacing: 0;
+
+    width: 240px;
+    text-align: center;
+    z-index: 100;
+    pointer-events: none;
+
+    /* Animation */
+    opacity: 0;
+    visibility: hidden;
+    transition: opacity 0.2s ease, transform 0.2s ease, visibility 0.2s;
+    box-shadow: 0 4px 8px rgba(0,0,0,0.5);
+    white-space: normal;
+}
+
+.column-header:hover::after {
+    opacity: 1;
+    visibility: visible;
+    transform: translateX(-50%) translateY(4px) scale(1);
+    transition-delay: 0.2s; /* Slight delay to prevent flickering */
 }
 
 .card-list {
