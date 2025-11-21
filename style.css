@@ -90,20 +90,115 @@ body {
 .section-title span { font-size: 18px; }
 .section-subtitle { color: var(--text-dim); font-size: 0.85rem; margin-left: 28px; }
 
-/* --- Log/File List --- */
-.log-section { flex: 1; display: flex; flex-direction: column; }
-.log-list-container { display: flex; flex-direction: column; gap: 12px; }
+/* --- Log/File List Container --- */
+.log-section {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    position: relative; /* Needed for absolute overlay */
+}
 
-/* Loading State */
+.log-list-container {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    transition: filter 0.8s var(--ease-spring);
+}
+
+/* The Blurred State */
+.blurred-content {
+    filter: blur(8px) grayscale(50%);
+    pointer-events: none;
+    user-select: none;
+    opacity: 0.6;
+}
+
+/* --- Auth Overlay --- */
+.auth-overlay {
+    position: absolute;
+    top: 0; left: 0; width: 100%; height: 100%;
+    z-index: 10;
+    display: flex; justify-content: center; align-items: flex-start;
+    padding-top: 60px;
+    opacity: 1;
+    transition: opacity 0.5s ease;
+}
+
+.auth-overlay.unlocked {
+    opacity: 0;
+    pointer-events: none;
+}
+
+.auth-box {
+    background: rgba(17, 17, 17, 0.85);
+    backdrop-filter: blur(10px);
+    border: 1px solid var(--outline);
+    padding: 32px;
+    border-radius: 24px;
+    text-align: center;
+    width: 100%;
+    max-width: 320px;
+    box-shadow: 0 10px 40px rgba(0,0,0,0.5);
+    transform: translateY(0);
+    transition: transform 0.5s var(--ease-spring);
+}
+
+.auth-overlay.unlocked .auth-box {
+    transform: translateY(-20px) scale(0.95);
+}
+
+.lock-icon { font-size: 48px; color: var(--text-main); margin-bottom: 16px; }
+
+.auth-box h3 {
+    font-family: var(--font-mono); font-size: 1rem;
+    color: var(--text-main); margin-bottom: 8px;
+    text-transform: uppercase; letter-spacing: 1px;
+}
+
+.auth-box p {
+    font-size: 0.85rem; color: var(--text-dim); margin-bottom: 24px;
+}
+
+.auth-input-wrapper {
+    display: flex; gap: 8px;
+}
+
+.auth-input {
+    flex: 1;
+    background: var(--bg-color);
+    border: 1px solid var(--outline);
+    color: var(--text-main);
+    padding: 10px 14px;
+    border-radius: 8px;
+    font-family: var(--font-mono);
+    outline: none;
+    transition: border-color 0.2s;
+}
+
+.auth-input:focus { border-color: var(--accent); }
+.auth-input.error { border-color: #ff4444; color: #ff4444; }
+
+.auth-btn {
+    background: var(--text-main);
+    color: var(--bg-color);
+    border: none;
+    border-radius: 8px;
+    width: 40px;
+    cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    transition: opacity 0.2s;
+}
+.auth-btn:hover { opacity: 0.9; }
+
+/* --- Loading & Cards --- */
 .loading-state {
     display: flex; align-items: center; justify-content: center; gap: 10px;
     padding: 40px 0; color: var(--text-dim);
     font-family: var(--font-mono); font-size: 0.8rem;
 }
 .spin-icon { animation: spin 1s linear infinite; }
-@keyframes spin { 100% { transform: rotate(360deg); } }
+@keyframes spin { to { transform: rotate(-360deg); } }
 
-/* File Cards */
 .file-card {
     background-color: var(--surface-container);
     padding: 16px; border-radius: var(--radius-md);
@@ -152,7 +247,6 @@ body {
     text-decoration: none; position: relative;
 }
 
-/* Specific Copy Button Style */
 .action-btn.copy-btn:hover {
     background-color: var(--text-main);
     color: var(--bg-color);
@@ -166,7 +260,7 @@ body {
 
 .action-btn span { font-size: 18px; }
 
-/* --- Toast Notification --- */
+/* --- Toast --- */
 .toast-container {
     position: fixed; bottom: 24px; left: 50%;
     transform: translateX(-50%);
@@ -191,19 +285,6 @@ body {
 @keyframes toastUp {
     from { opacity: 0; transform: translateY(20px); }
     to { opacity: 1; transform: translateY(0); }
-}
-
-.loading-state {
-    display: flex; align-items: center; justify-content: center; gap: 10px;
-    padding: 40px 0; color: var(--text-dim);
-    font-family: var(--font-mono); font-size: 0.8rem;
-}
-
-.spin-icon { animation: spin 1s linear infinite; }
-
-/* UPDATED: Rotates Counter-Clockwise now */
-@keyframes spin {
-    to { transform: rotate(-360deg); }
 }
 
 /* --- Footer --- */

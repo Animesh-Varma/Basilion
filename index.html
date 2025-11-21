@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>board.animeshvarma.dev</title>
 
-    <!-- Favicon: Download Arrow -->
+    <!-- Favicon -->
     <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 24 24%22 fill=%22white%22><path d=%22M12 16l-5-5 1.4-1.45 2.6 2.6V4h2v8.15l2.6-2.6L17 11l-5 5Zm-6 4q-.825 0-1.412-.587Q4 18.825 4 18v-3h2v3h12v-3h2v3q0 .825-.587 1.413Q18.825 20 18 20Z%22/></svg>">
 
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -25,7 +25,7 @@
             </div>
             <div class="status-badge">
                 <div class="live-dot"></div>
-                <span>System Online</span>
+                <span id="systemStatus">Encrypted</span>
             </div>
         </header>
         <main>
@@ -36,12 +36,29 @@
                 </h2>
                 <p class="section-subtitle">Public data retrieval node.</p>
             </div>
+
             <section class="log-section">
-                <div class="log-list-container" id="fileList"></div>
+                <!-- The Blur Wrapper -->
+                <div class="log-list-container blurred-content" id="fileList"></div>
+
+                <!-- The Lock Overlay -->
+                <div class="auth-overlay" id="authOverlay">
+                    <div class="auth-box">
+                        <span class="material-symbols-rounded lock-icon">lock</span>
+                        <h3>Archive Locked</h3>
+                        <p>Authentication required to access files.</p>
+
+                        <div class="auth-input-wrapper">
+                            <input type="password" id="adminPassword" placeholder="Enter Key..." class="auth-input">
+                            <button class="auth-btn" onclick="authenticate()">
+                                <span class="material-symbols-rounded">arrow_forward</span>
+                            </button>
+                        </div>
+                    </div>
+                </div>
             </section>
         </main>
 
-        <!-- Updated Footer -->
         <footer>
             <p>
                 <a href="https://github.com/animesh-varma" target="_blank">GitHub</a> |

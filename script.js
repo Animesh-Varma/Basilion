@@ -1,53 +1,200 @@
 // CONFIGURATION
 const WEB_APP_URL = "https://script.google.com/macros/s/AKfycbzfGvJ2LiJT1_iRsCsMHDVnCIQHt1RecjTj5aq14TswIyIg-1i5SsTxZFAd4F3-GXiqQA/exec";
+
+// Fake data to show behind the blur
+const DUMMY_FILES = [
+    { name: "encrypted_manifest.dat", size: "12 KB", date: new Date().toISOString(), type: "system" },
+    { name: "sys_index_v4.lock", size: "2.4 MB", date: new Date().toISOString(), type: "system" },
+    { name: "secure_packet_884.tmp", size: "845 KB", date: new Date().toISOString(), type: "system" }
+];
+
+// DOM Elements
 const fileListEl = document.getElementById('fileList');
 const toastContainer = document.getElementById('toast-container');
+const authOverlay = document.getElementById('authOverlay');
+const systemStatus = document.getElementById('systemStatus');
+const liveDot = document.querySelector('.live-dot');
+
+let currentSessionHash = null;
 
 document.addEventListener('DOMContentLoaded', () => {
-    initLoad();
+    // 1. Check for existing session first
+    const storedHash = sessionStorage.getItem('board_auth_hash');
+    if (storedHash) {
+        performLogin(storedHash);
+    } else {
+        // 2. If no session, run the "fake" boot sequence
+        initBootSequence();
+    }
 });
 
-function initLoad() {
+// --- Boot Sequence (Visual Only) ---
+
+function initBootSequence() {
+    // Step 1: Show Connecting
     fileListEl.innerHTML = `
         <div class="loading-state">
             <span class="material-symbols-rounded spin-icon">sync</span>
-            <span>ESTABLISHING CONNECTION...</span>
+            <span>ESTABLISHING UPLINK...</span>
         </div>
     `;
 
-    // Load the list via JSONP
-    loadJSONP('list')
+    // Step 2: After 1.2s, show dummy files (Encrypted State)
+    setTimeout(() => {
+        renderDummyFiles();
+        // Ensure the overlay is visible and blur is active
+        authOverlay.classList.remove('unlocked');
+        fileListEl.classList.add('blurred-content');
+    }, 1200);
+}
+
+function renderDummyFiles() {
+    fileListEl.innerHTML = '';
+
+    DUMMY_FILES.forEach((file, index) => {
+        setTimeout(() => {
+            const card = document.createElement('div');
+            card.className = 'file-card';
+            // Visuals for dummy files
+            card.style.opacity = '0.5'; // Slightly simpler look
+
+            card.innerHTML = `
+                <div class="file-icon-box" style="color: #888; border-color: #333;">
+                    <span class="material-symbols-rounded">lock</span>
+                </div>
+                <div class="file-details">
+                    <span class="file-name" style="color: #888;">${file.name}</span>
+                    <div class="file-meta">
+                        <span>${file.size}</span>
+                        <span>•</span>
+                        <span>ENCRYPTED</span>
+                    </div>
+                </div>
+                <div class="actions">
+                    <button class="action-btn" disabled style="border-style: dashed; opacity: 0.3;">
+                        <span class="material-symbols-rounded">block</span>
+                    </button>
+                </div>
+            `;
+            fileListEl.appendChild(card);
+        }, index * 100);
+    });
+}
+
+// --- Authentication Logic ---
+
+async function authenticate() {
+    const input = document.getElementById('adminPassword');
+    const password = input.value;
+
+    if(!password) return;
+
+    const hash = await hashString(password);
+    performLogin(hash, input);
+}
+
+function performLogin(hash, inputElem = null) {
+    // UI Feedback (Loading Spinner on Button)
+    if(inputElem) {
+        document.querySelector('.auth-btn').innerHTML = '<span class="material-symbols-rounded spin-icon">sync</span>';
+    }
+
+    loadJSONP('list', null, hash)
         .then(json => {
-            if (json.status === "error") throw new Error(json.message);
+            if (json.status === "error") {
+                throw new Error(json.message);
+            }
+
+            // Success!
+            currentSessionHash = hash;
+            sessionStorage.setItem('board_auth_hash', hash);
+
+            if(inputElem) inputElem.value = '';
+
+            // 1. Clear Dummies
+            fileListEl.innerHTML = '';
+
+            // 2. Unlock Interface (Removes Blur)
+            unlockInterface();
+
+            // 3. Render Real Files
             renderFiles(json.data);
         })
         .catch(error => {
             console.error(error);
-            showError("Connection Failed", "Server returned invalid data");
+            if(inputElem) {
+                inputElem.classList.add('error');
+                showToast("ACCESS DENIED");
+                document.querySelector('.auth-btn').innerHTML = '<span class="material-symbols-rounded">arrow_forward</span>';
+                setTimeout(() => inputElem.classList.remove('error'), 500);
+            } else {
+                sessionStorage.removeItem('board_auth_hash');
+                initBootSequence(); // Revert to dummy state if auto-login fails
+            }
         });
 }
 
-function loadJSONP(action, id = null) {
+// Allow pressing Enter to submit
+document.getElementById('adminPassword').addEventListener('keypress', (e) => {
+    if (e.key === 'Enter') authenticate();
+});
+
+function unlockInterface() {
+    authOverlay.classList.add('unlocked');
+    fileListEl.classList.remove('blurred-content');
+
+    systemStatus.innerText = "System Online";
+    systemStatus.style.color = "#FFFFFF";
+    liveDot.style.backgroundColor = "#FFFFFF";
+    liveDot.style.boxShadow = "0 0 8px #FFFFFF";
+}
+
+window.logout = function(e) {
+    if(e) e.preventDefault();
+    sessionStorage.removeItem('board_auth_hash');
+    location.reload();
+}
+
+async function hashString(msg) {
+    const data = new TextEncoder().encode(msg);
+    const hash = await crypto.subtle.digest('SHA-256', data);
+    return Array.from(new Uint8Array(hash)).map(b => b.toString(16).padStart(2, '0')).join('');
+}
+
+function loadJSONP(action, id = null, authHash = null) {
     return new Promise((resolve, reject) => {
-        // Create unique callback name
+        const hashToSend = authHash || currentSessionHash;
+
+        if (!hashToSend) {
+            reject(new Error("No authentication hash available"));
+            return;
+        }
+
         const callbackName = 'cb_' + Date.now() + '_' + Math.round(Math.random() * 1000000);
 
-        // Define the global callback
+        const targetUrl = new URL(WEB_APP_URL);
+
+        targetUrl.searchParams.set("action", action);
+        if (id) targetUrl.searchParams.set("id", id);
+
+        // CHANGE THIS: Send as 'p' instead of 'auth'
+        targetUrl.searchParams.set("p", hashToSend);
+
+        targetUrl.searchParams.set("callback", callbackName);
+        targetUrl.searchParams.set("t", Date.now());
+
         window[callbackName] = (data) => {
             cleanup();
             resolve(data);
         };
 
-        // Cleanup helper
         function cleanup() {
             delete window[callbackName];
             if (script.parentNode) document.body.removeChild(script);
         }
 
-        // Create script tag
         const script = document.createElement('script');
-        // Added &t= timestamp to prevent caching of old JSON responses
-        script.src = `${WEB_APP_URL}?action=${action}&id=${id || ''}&callback=${callbackName}&t=${Date.now()}`;
+        script.src = targetUrl.toString();
 
         script.onerror = () => {
             cleanup();
@@ -57,6 +204,8 @@ function loadJSONP(action, id = null) {
         document.body.appendChild(script);
     });
 }
+
+// --- Real File Rendering ---
 
 function renderFiles(files) {
     fileListEl.innerHTML = '';
@@ -156,17 +305,6 @@ function isText(mime, filename) {
         return textExts.includes(ext);
     }
     return false;
-}
-
-function showError(title, detail) {
-    fileListEl.innerHTML = `
-        <div class="loading-state" style="color: #ff4444; flex-direction: column; gap: 8px;">
-            <span class="material-symbols-rounded" style="font-size: 32px;">wifi_off</span>
-            <span style="font-weight: 700">${title}</span>
-            <span style="font-size: 0.8rem; opacity: 0.7; max-width: 300px; text-align: center;">${detail}</span>
-            <button onclick="initLoad()" style="margin-top:10px; background:none; border:1px solid #333; color:#fff; padding:5px 10px; border-radius:5px; cursor:pointer;">RETRY</button>
-        </div>
-    `;
 }
 
 function showToast(msg) {
