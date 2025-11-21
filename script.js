@@ -10,8 +10,8 @@ const TARGET_HASH = "__ADMIN_HASH__";
 
 // 3. Fallback Data (If DB fails or is empty)
 const EMBEDDED_DB = [
-    { id: '101', title: 'Lab Interface', link: 'https://lab.animeshvarma.dev', desc: 'The Kanban interface you are viewing right now.', section: 'ongoing' },
-    { id: '102', title: 'Upload Protocol', link: 'https://upload.animeshvarma.dev', desc: 'Secure file transmission protocol.', section: 'stable' }
+    { id: '101', title: 'Test data', link: 'https://animeshvarma.dev', desc: 'Connection to the server failed.', section: 'ongoing' },
+    { id: '102', title: 'Test data', link: 'https://animeshvarma.dev', desc: 'Connection to the server failed.', section: 'stable' }
 ];
 
 // --- State ---
@@ -120,16 +120,21 @@ function createCardElement(p) {
     div.className = 'project-card';
     div.setAttribute('data-id', p.id);
 
-    // Edit Button (Fixed Position & Click Handling)
-    let editBtn = '';
+    // Action Buttons (Rendered only if Admin)
+    let actions = '';
     if (isAuthenticated) {
-        editBtn = `<button class="card-edit-btn material-symbols-rounded" type="button">edit</button>`;
+        actions = `
+            <div class="card-actions">
+                <button class="card-action-btn danger material-symbols-rounded" type="button" data-action="delete">delete</button>
+                <button class="card-action-btn material-symbols-rounded" type="button" data-action="edit">edit</button>
+            </div>
+        `;
     }
 
     const linkIcon = p.link ? '<span class="material-symbols-rounded card-link-icon">link</span>' : '';
 
     div.innerHTML = `
-        ${editBtn}
+        ${actions}
         <span class="card-title">${p.title} ${linkIcon}</span>
         <div class="card-desc-wrapper">
             <div class="card-desc-inner">
@@ -138,15 +143,20 @@ function createCardElement(p) {
         </div>
     `;
 
-    // Link Click Logic
+    // Click Delegation
     div.addEventListener('click', (e) => {
-        // If clicking the edit button, don't open link
-        if (e.target.closest('.card-edit-btn')) {
-            e.stopPropagation();
-            editProject(p.id);
+        const actionBtn = e.target.closest('.card-action-btn');
+
+        // Handle Buttons (Edit / Delete)
+        if (actionBtn) {
+            e.stopPropagation(); // Prevent card opening
+            const action = actionBtn.dataset.action;
+            if (action === 'edit') editProject(p.id);
+            if (action === 'delete') deleteProject(p.id);
             return;
         }
-        // If card has link, open it
+
+        // Handle Card Click (Open Link)
         if (p.link) window.open(p.link, '_blank');
     });
 
@@ -227,7 +237,7 @@ function enableAdminMode() {
     systemStatus.style.color = "#FFFFFF";
 
     initDragAndDrop(); // Re-init to unlock dragging
-    renderBoard(); // Re-render to show pencils
+    renderBoard(); // Re-render to show controls
 }
 
 function logout() {
@@ -259,6 +269,14 @@ function openProjectModal(isEdit = false, id = null) {
 
 function editProject(id) {
     openProjectModal(true, id);
+}
+
+function deleteProject(id) {
+    if (confirm("Are you sure you want to delete this protocol? This cannot be undone.")) {
+        projects = projects.filter(p => p.id !== id);
+        syncToCloud();
+        renderBoard();
+    }
 }
 
 function saveProject() {
