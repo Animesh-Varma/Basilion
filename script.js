@@ -1,23 +1,22 @@
 // --- Configuration ---
 
 // 1. Database URL
-// Replaced by Cloudflare Build Command: sed -i "s|__DB_URL__|$DB_URL|g" script.js
 const DB_URL = "__DB_URL__";
 
-// 2. Admin Hash
-// Replaced by Cloudflare Build Command: sed -i "s|__ADMIN_HASH__|$ADMIN_HASH|g" script.js
+// 2. Admin Hash (Used for UI feedback, but actual security is now on Server)
 const TARGET_HASH = "__ADMIN_HASH__";
 
-// 3. Fallback Data (If DB fails or is empty)
+// 3. Fallback Data
 const EMBEDDED_DB = [
-    { id: '101', title: 'Test data', link: 'https://animeshvarma.dev', desc: 'Connection to the server failed.', section: 'ongoing' },
-    { id: '102', title: 'Test data', link: 'https://animeshvarma.dev', desc: 'Connection to the server failed.', section: 'stable' }
+    { id: '101', title: 'Lab Interface', link: 'https://lab.animeshvarma.dev', desc: 'The Kanban interface you are viewing right now.', section: 'ongoing' },
+    { id: '102', title: 'Upload Protocol', link: 'https://upload.animeshvarma.dev', desc: 'Secure file transmission protocol.', section: 'stable' }
 ];
 
 // --- State ---
 const SECTIONS = ['ongoing', 'planned', 'onhold', 'stable', 'discontinued'];
 let projects = [];
 let isAuthenticated = false;
+let sessionToken = null; // Stores the computed hash
 
 const systemStatus = document.getElementById('systemStatus');
 const liveDot = document.querySelector('.live-dot');
@@ -32,23 +31,15 @@ document.addEventListener('DOMContentLoaded', async () => {
 // --- Data Synchronization ---
 
 async function loadData() {
-    // Only try to load if URL is replaced (not placeholder)
     if (DB_URL && DB_URL.startsWith('http')) {
-
-        // Flash status so you know it's working
         systemStatus.innerText = "ESTABLISHING UPLINK...";
-
         try {
-            // CACHE BUSTER: ?t=${Date.now()} forces a fresh request every time
             const response = await fetch(`${DB_URL}?t=${Date.now()}`);
             const json = await response.json();
-
             if (json.data && Array.isArray(json.data)) {
                 projects = json.data;
                 renderBoard();
-
-                // Reset status after load
-                systemStatus.innerText = isAuthenticated ? "ADMINISTRATOR" : "Viewing Mode";
+                updateStatusDisplay();
                 return;
             }
         } catch (e) {
@@ -56,54 +47,54 @@ async function loadData() {
             flashStatus("CONNECTION LOST", "#ff4444");
         }
     }
-
-    // Fallback (Only runs if Cloud fails)
     projects = [...EMBEDDED_DB];
     renderBoard();
 }
 
 async function syncToCloud() {
-    if (!DB_URL || !DB_URL.startsWith('http')) {
-        return console.warn("No DB URL configured.");
-    }
+    if (!DB_URL || !DB_URL.startsWith('http')) return console.warn("No DB URL.");
+    if (!sessionToken) return console.warn("Cannot sync: No Auth Token.");
 
     flashStatus("TRANSMITTING...", "#FFFF00");
 
     try {
-        // 'no-cors' is required for Google Apps Script POST requests from browser
+        // SECURE POST: Sending { auth: "HASH", data: [...] }
         await fetch(DB_URL, {
             method: 'POST',
             mode: 'no-cors',
-            headers: {
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify(projects)
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                auth: sessionToken, // <--- The Key
+                data: projects
+            })
         });
-
-        // Since 'no-cors' returns an opaque response, we assume success if no network error
         setTimeout(() => flashStatus("SYNC COMPLETE", "#FFFFFF"), 500);
-
     } catch (e) {
         console.error(e);
         flashStatus("SYNC ERROR", "#ff4444");
     }
 }
 
-function flashStatus(text, color) {
-    const originalText = isAuthenticated ? "ADMINISTRATOR" : "Viewing Mode";
-    const originalColor = isAuthenticated ? "#00FF00" : "#FFFFFF";
+function updateStatusDisplay() {
+    if (isAuthenticated) {
+        systemStatus.innerText = "ADMINISTRATOR";
+        systemStatus.style.color = "#FFFFFF";
+        liveDot.style.backgroundColor = "#00FF00";
+        liveDot.style.boxShadow = "0 0 8px #00FF00";
+    } else {
+        systemStatus.innerText = "Viewing Mode";
+        systemStatus.style.color = "#888";
+        liveDot.style.backgroundColor = "#FFFFFF";
+        liveDot.style.boxShadow = "0 0 8px #FFFFFF";
+    }
+}
 
+function flashStatus(text, color) {
     systemStatus.innerText = text;
     systemStatus.style.color = color;
     liveDot.style.backgroundColor = color;
     liveDot.style.boxShadow = `0 0 8px ${color}`;
-
-    setTimeout(() => {
-        systemStatus.innerText = originalText;
-        systemStatus.style.color = "#888";
-        liveDot.style.backgroundColor = originalColor;
-        liveDot.style.boxShadow = `0 0 8px ${originalColor}`;
-    }, 2000);
+    setTimeout(updateStatusDisplay, 2000);
 }
 
 // --- Rendering ---
@@ -120,7 +111,7 @@ function createCardElement(p) {
     div.className = 'project-card';
     div.setAttribute('data-id', p.id);
 
-    // Action Buttons (Rendered only if Admin)
+    // Admin Controls
     let actions = '';
     if (isAuthenticated) {
         actions = `
@@ -143,20 +134,15 @@ function createCardElement(p) {
         </div>
     `;
 
-    // Click Delegation
     div.addEventListener('click', (e) => {
         const actionBtn = e.target.closest('.card-action-btn');
-
-        // Handle Buttons (Edit / Delete)
         if (actionBtn) {
-            e.stopPropagation(); // Prevent card opening
+            e.stopPropagation();
             const action = actionBtn.dataset.action;
             if (action === 'edit') editProject(p.id);
             if (action === 'delete') deleteProject(p.id);
             return;
         }
-
-        // Handle Card Click (Open Link)
         if (p.link) window.open(p.link, '_blank');
     });
 
@@ -169,7 +155,7 @@ function initDragAndDrop() {
         new Sortable(document.getElementById(secId), {
             group: 'shared',
             animation: 150,
-            disabled: !isAuthenticated, // Locked unless admin
+            disabled: !isAuthenticated,
             ghostClass: 'sortable-ghost',
             delay: 100, delayOnTouchOnly: true,
             onEnd: (evt) => {
@@ -198,14 +184,16 @@ async function authenticate() {
     const input = document.getElementById('adminPassword');
     const hash = await hashString(input.value);
 
-    // Check against Env Var or default to "admin" hash for testing
+    // Allow "admin" default hash if env var not replaced
     const validHash = (!TARGET_HASH.includes("ADMIN_HASH"))
         ? TARGET_HASH
         : "8c6976e5b5410415bde908bd4dee15dfb167a9c873fc4bb8a81f6f2ab448a918";
 
     if (hash === validHash) {
         isAuthenticated = true;
-        sessionStorage.setItem('lab_auth', 'true');
+        sessionToken = hash; // Store the token for API calls
+        sessionStorage.setItem('lab_token', hash); // Persist
+
         enableAdminMode();
         closeModals();
         input.value = '';
@@ -222,26 +210,26 @@ async function hashString(msg) {
 }
 
 function checkSession() {
-    if (sessionStorage.getItem('lab_auth') === 'true') enableAdminMode();
+    const storedToken = sessionStorage.getItem('lab_token');
+    if (storedToken) {
+        sessionToken = storedToken;
+        isAuthenticated = true;
+        enableAdminMode();
+    }
 }
 
 function enableAdminMode() {
-    isAuthenticated = true;
     document.body.classList.add('admin-view');
     document.getElementById('adminControls').classList.remove('hidden');
-
-    // Visuals
-    liveDot.style.backgroundColor = "#00FF00";
-    liveDot.style.boxShadow = "0 0 8px #00FF00";
-    systemStatus.innerText = "ADMINISTRATOR";
-    systemStatus.style.color = "#FFFFFF";
-
-    initDragAndDrop(); // Re-init to unlock dragging
-    renderBoard(); // Re-render to show controls
+    updateStatusDisplay();
+    initDragAndDrop(); // Re-init Sortable to unlock
+    renderBoard(); // Re-render to show buttons
 }
 
 function logout() {
-    sessionStorage.removeItem('lab_auth');
+    sessionStorage.removeItem('lab_token');
+    isAuthenticated = false;
+    sessionToken = null;
     location.reload();
 }
 
@@ -267,12 +255,10 @@ function openProjectModal(isEdit = false, id = null) {
     document.getElementById('projectModal').classList.remove('hidden');
 }
 
-function editProject(id) {
-    openProjectModal(true, id);
-}
+function editProject(id) { openProjectModal(true, id); }
 
 function deleteProject(id) {
-    if (confirm("Are you sure you want to delete this protocol? This cannot be undone.")) {
+    if (confirm("Are you sure you want to delete this protocol?")) {
         projects = projects.filter(p => p.id !== id);
         syncToCloud();
         renderBoard();
