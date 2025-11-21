@@ -84,13 +84,16 @@ async function syncToCloud() {
     try {
         const response = await fetch(DB_URL, {
             method: 'POST',
-            mode: 'no-cors',
+            // mode: 'no-cors',  <--- REMOVE THIS LINE
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
                 auth: sessionToken,
                 data: projects
             })
         });
+
+        if (!response.ok) throw new Error(response.status); // Now we can actually check errors
+
         setTimeout(() => flashStatus("SYNC COMPLETE", "#FFFFFF"), 500);
     } catch (e) {
         console.error(e);
