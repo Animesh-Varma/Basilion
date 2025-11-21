@@ -1,11 +1,11 @@
 // CONFIGURATION
 const WEB_APP_URL = "https://script.google.com/macros/s/AKfycbzfGvJ2LiJT1_iRsCsMHDVnCIQHt1RecjTj5aq14TswIyIg-1i5SsTxZFAd4F3-GXiqQA/exec";
 
-// Fake data to show behind the blur
+// Fake data to show behind the blur (2 Same, 1 Different)
 const DUMMY_FILES = [
-    { name: "encrypted_manifest.dat", size: "12 KB", date: new Date().toISOString(), type: "system" },
-    { name: "sys_index_v4.lock", size: "2.4 MB", date: new Date().toISOString(), type: "system" },
-    { name: "secure_packet_884.tmp", size: "845 KB", date: new Date().toISOString(), type: "system" }
+    { name: "sector_09_archive.dat", size: "128 MB", date: new Date().toISOString(), icon: "text_snippet" },
+    { name: "sector_12_archive.dat", size: "442 MB", date: new Date().toISOString(), icon: "terminal" }, // Same type as above
+    { name: "sys_boot_sequence.lock", size: "12 KB", date: new Date().toISOString(), icon: "lock" } // Different type
 ];
 
 // DOM Elements
@@ -56,11 +56,11 @@ function renderDummyFiles() {
             const card = document.createElement('div');
             card.className = 'file-card';
             // Visuals for dummy files
-            card.style.opacity = '0.5'; // Slightly simpler look
+            card.style.opacity = '0.5';
 
             card.innerHTML = `
                 <div class="file-icon-box" style="color: #888; border-color: #333;">
-                    <span class="material-symbols-rounded">lock</span>
+                    <span class="material-symbols-rounded">${file.icon}</span>
                 </div>
                 <div class="file-details">
                     <span class="file-name" style="color: #888;">${file.name}</span>
@@ -177,7 +177,7 @@ function loadJSONP(action, id = null, authHash = null) {
         targetUrl.searchParams.set("action", action);
         if (id) targetUrl.searchParams.set("id", id);
 
-        // CHANGE THIS: Send as 'p' instead of 'auth'
+        // Send as 'p' to match your deployed script
         targetUrl.searchParams.set("p", hashToSend);
 
         targetUrl.searchParams.set("callback", callbackName);
