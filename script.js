@@ -11,11 +11,11 @@ const TARGET_HASH = "__ADMIN_HASH__";
 // 3. Fallback Data (If DB fails or is empty)
 const EMBEDDED_DB = [
     { id: '101', title: 'Lab Interface', link: 'https://lab.animeshvarma.dev', desc: 'The Kanban interface you are viewing right now.', section: 'ongoing' },
-    { id: '102', title: 'Upload Protocol', link: 'https://upload.animeshvarma.dev', desc: 'Secure file transmission protocol.', section: 'completed' }
+    { id: '102', title: 'Upload Protocol', link: 'https://upload.animeshvarma.dev', desc: 'Secure file transmission protocol.', section: 'stable' }
 ];
 
 // --- State ---
-const SECTIONS = ['ongoing', 'planned', 'onhold', 'completed', 'scrapped'];
+const SECTIONS = ['ongoing', 'planned', 'onhold', 'stable', 'scrapped'];
 let projects = [];
 let isAuthenticated = false;
 
