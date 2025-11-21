@@ -23,6 +23,7 @@ let sessionToken = null; // Stores the computed hash
 const systemStatus = document.getElementById('systemStatus');
 const liveDot = document.querySelector('.live-dot');
 const loadingOverlay = document.getElementById('loadingOverlay');
+const mainContent = document.querySelector('main');
 
 // --- Initialization ---
 document.addEventListener('DOMContentLoaded', async () => {
@@ -34,8 +35,6 @@ document.addEventListener('DOMContentLoaded', async () => {
 // --- Data Synchronization ---
 
 async function loadData() {
-    // Keep overlay visible
-
     if (DB_URL && DB_URL.startsWith('http')) {
         try {
             const response = await fetch(`${DB_URL}?t=${Date.now()}`);
@@ -49,8 +48,12 @@ async function loadData() {
             if (json.data && Array.isArray(json.data)) {
                 projects = json.data;
                 renderBoard();
-                // Success: Fade out overlay
-                setTimeout(() => loadingOverlay.classList.add('hidden'), 300);
+
+                // Trigger Animation
+                setTimeout(() => {
+                    loadingOverlay.classList.add('hidden');
+                    mainContent.classList.add('loaded'); // Triggers CSS animation
+                }, 300);
                 return;
             }
         } catch (e) {
@@ -64,8 +67,11 @@ async function loadData() {
     // Fallback if fetch fails or no URL
     projects = [...EMBEDDED_DB];
     renderBoard();
-    // Even on error, remove overlay so user can see embedded data
-    setTimeout(() => loadingOverlay.classList.add('hidden'), 300);
+    // Trigger Animation even on fallback
+    setTimeout(() => {
+        loadingOverlay.classList.add('hidden');
+        mainContent.classList.add('loaded');
+    }, 300);
 }
 
 async function syncToCloud() {
