@@ -39,13 +39,18 @@ document.addEventListener('DOMContentLoaded', async () => {
 // --- Data Synchronization ---
 
 async function loadData() {
-    // Flag to track if we successfully loaded from cloud
+    // 1. Sync Header Status with Overlay (Yellow/Processing)
+    if (systemStatus) systemStatus.innerText = "ESTABLISHING UPLINK...";
+    if (liveDot) {
+        liveDot.style.backgroundColor = "#FFFF00"; // Yellow
+        liveDot.style.boxShadow = "0 0 8px #FFFF00";
+    }
+
     let cloudSuccess = false;
 
     if (DB_URL && DB_URL.startsWith('http')) {
         try {
             const response = await fetch(`${DB_URL}?t=${Date.now()}`);
-
             if (!response.ok) throw new Error(response.status);
 
             const json = await response.json();
@@ -60,15 +65,14 @@ async function loadData() {
         }
     }
 
-    // If Cloud failed, use fallback
-    if (!cloudSuccess) {
-        projects = [...EMBEDDED_DB];
-    }
+    if (!cloudSuccess) projects = [...EMBEDDED_DB];
 
-    // Render
     renderBoard();
 
-    // ALWAYS hide overlay and animate
+    // 2. Reset Status to Normal (White/Green) before revealing
+    updateStatusDisplay();
+
+    // 3. Reveal Content
     setTimeout(() => {
         if(loadingOverlay) loadingOverlay.classList.add('hidden');
         if(mainContent) mainContent.classList.add('loaded');
@@ -84,7 +88,6 @@ async function syncToCloud() {
     try {
         const response = await fetch(DB_URL, {
             method: 'POST',
-            // mode: 'no-cors',  <--- REMOVE THIS LINE
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
                 auth: sessionToken,
@@ -92,8 +95,7 @@ async function syncToCloud() {
             })
         });
 
-        if (!response.ok) throw new Error(response.status); // Now we can actually check errors
-
+        if (!response.ok) throw new Error(response.status);
         setTimeout(() => flashStatus("SYNC COMPLETE", "#FFFFFF"), 500);
     } catch (e) {
         console.error(e);
