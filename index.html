@@ -216,34 +216,44 @@
             </ul>
 
             <h2>5. Android Permissions</h2>
-            <p>The Apps request only the minimum permissions required for their core functionality. Depending on the specific App, commonly requested permissions may include:</p>
+            <p>The Apps request only the minimum permissions required for their core functionality. For <strong>Coeus</strong> specifically, the following permissions are critical:</p>
             <ul>
+                <li><strong>Near Field Communication (NFC):</strong> Used exclusively to interact with physical NFC tags, smart cards, and similar hardware. This permission allows the App to send and receive low-level commands (APDU) to the tag.</li>
+                <li><strong>Vibration:</strong> Used to provide haptic feedback when a tag is successfully detected or when an operation completes.</li>
                 <li><strong>Clipboard Access:</strong> To allow you to paste content into the App or copy results out of it. Clipboard contents are not continuously monitored.</li>
                 <li><strong>Notifications:</strong> To inform you when a long-running local task or process has completed.</li>
                 <li><strong>Storage / Files &amp; Media:</strong> To read or write files that you explicitly select, such as when encrypting, decrypting, loading, or saving content.</li>
-                <li><strong>Internet:</strong> For Apps that provide online or AI-powered features, internet access is used solely to communicate with the necessary external service.</li>
+                <li><strong>Internet:</strong> For Apps that provide online or AI-powered features, internet access is used solely to communicate with the necessary external service. (Currently only required by <strong>LOTL</strong> for communication with the Gemini API)</li>
             </ul>
             <p>You can review and manage App permissions at any time in your device settings.</p>
 
-            <h2>6. Third-Party Services</h2>
+            <h2>6. NFC Data and Sensitive Information</h2>
+            <p><strong>Coeus</strong> is capable of reading raw data from various NFC technologies, which may include sensitive information (such as unique identifiers, payment card metadata, or access control keys).</p>
+            <ul>
+                <li><strong>Local Processing:</strong> All communication with NFC tags happens directly between your device's NFC controller and the tag. The data read from the tag is processed entirely within your device's memory (RAM).</li>
+                <li><strong>No Transmission:</strong> The App <strong>does not</strong> automatically transmit scanned tag data, UIDs, or keys to any external server or cloud service.</li>
+                <li><strong>Keys and Secrets:</strong> Any cryptographic keys (AES, DES, etc.) you enter or generate within the App are stored in your device's secure storage (Keystore) and are never shared with the developer.</li>
+            </ul>
+
+            <h2>7. Third-Party Services</h2>
             <p>The Apps do not integrate third-party advertising networks or data broker SDKs. Where third-party services are used (for example, AI or platform services), they are used only to deliver functionality requested by you, not for advertising or user tracking.</p>
 
-            <h2>7. User Rights and Control</h2>
+            <h2>8. User Rights and Control</h2>
             <p>Because the Apps are designed to avoid storing personal data on developer-controlled servers, there is typically no centralized account data for the developer to access, modify, or delete on your behalf. Any content you create or store locally on your device can usually be managed or removed using in-App options or your device’s file management tools.</p>
 
-            <h2>8. Children’s Privacy</h2>
+            <h2>9. Children’s Privacy</h2>
             <p>The Apps are not directed to children under the age of 13 (or the equivalent minimum age in your jurisdiction). The developer does not knowingly collect personal information from children.</p>
 
-            <h2>9. Security</h2>
+            <h2>10. Security</h2>
             <p>Reasonable technical and organizational measures are used to help protect data processed by the Apps, including limiting data collection, preferring local processing, and avoiding unnecessary retention. However, no method of transmission or storage is completely secure, and you are encouraged to protect your device with appropriate security measures.</p>
 
-            <h2>10. Changes to This Policy</h2>
+            <h2>11. Changes to This Policy</h2>
             <p>This Privacy Policy may be updated from time to time to reflect changes in legal requirements, platform policies, or App functionality. Any changes will be posted with an updated “Effective Date”, and continued use of the Apps after such changes indicates your acceptance of the updated policy.</p>
 
-            <h2>11. Governing Law</h2>
+            <h2>12. Governing Law</h2>
             <p>This Privacy Policy shall be governed by and construed in accordance with the laws of India, specifically the laws of the State of Madhya Pradesh.</p>
 
-            <h2>12. Contact</h2>
+            <h2>13. Contact</h2>
             <p>If you have any questions or concerns about this Privacy Policy or the Apps, please contact:</p>
             <p><a href="mailto:contact@animeshvarma.dev">contact@animeshvarma.dev</a></p>
         </main>
